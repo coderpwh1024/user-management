@@ -18,6 +18,7 @@
       "Bash(git show:*)",
       "Bash(git add:*)",
       "Bash(git branch:*)",
+      "Bash(git push:*)",
       "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
@@ -34,8 +35,7 @@
     "deny": [
       "Read(./.env)",
       "Read(.env)",
-      "Bash(rm -rf:*)",
-      "Bash(git push:*)"
+      "Bash(rm -rf:*)"
     ]
   }
 }
