@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "language": "chinese",
+  "permissions": {
+    "allow": [
+      "Bash(pytest:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(pip install:*)",
+      "Bash(pip:*)",
+      "Bash(uvicorn:*)",
+      "Bash(ruff:*)",
+      "Bash(mypy:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git add:*)",
+      "Bash(git branch:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Read",
+      "Edit(app/**)",
+      "Edit(tests/**)",
+      "Edit(sql/**)",
+      "Edit(docs/**)",
+      "Write(app/**)",
+      "Write(tests/**)",
+      "Write(sql/**)",
+      "Write(docs/**)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(.env)",
+      "Bash(rm -rf:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}
