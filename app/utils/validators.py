@@ -13,6 +13,9 @@ _ID_CARD_PATTERN = re.compile(r"^\d{17}[\dXx]$")
 # 角色编码：字母 / 数字 / 下划线，2-64 位（统一规整为大写）
 _ROLE_CODE_PATTERN = re.compile(r"^[A-Za-z0-9_]{2,64}$")
 
+# 视频链接：必须以 http:// 或 https:// 开头
+_VIDEO_URL_PATTERN = re.compile(r"^https?://\S+$", re.IGNORECASE)
+
 # 身份证校验：加权因子与校验码映射
 _ID_CARD_WEIGHTS = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2]
 _ID_CARD_CHECK_CODES = ["1", "0", "X", "9", "8", "7", "6", "5", "4", "3", "2"]
@@ -47,6 +50,19 @@ def validate_id_card(id_card: str) -> str:
     if id_card[-1] != expected:
         raise ValueError("身份证号校验位不正确")
     return id_card
+
+
+def validate_video_url(video_url: str) -> str:
+    """校验视频链接格式。
+
+    :param video_url: 待校验视频链接。
+    :return: 去除首尾空白后的视频链接。
+    :raises ValueError: 非 http(s) 链接或为空时抛出。
+    """
+    video_url = (video_url or "").strip()
+    if not _VIDEO_URL_PATTERN.match(video_url):
+        raise ValueError("视频链接格式不正确（需以 http:// 或 https:// 开头）")
+    return video_url
 
 
 def validate_role_code(role_code: str) -> str:

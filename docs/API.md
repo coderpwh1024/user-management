@@ -327,3 +327,127 @@ curl -X PUT http://localhost:8000/api/v1/roles/1 \
 ```bash
 curl -X DELETE http://localhost:8000/api/v1/roles/1
 ```
+
+---
+
+## 五、视频异步上传与查询接口
+
+- **统一前缀**：`/api/video`（按需求约定，未使用 `/api/v1` 版本路径）
+- **命名约定**：DB 列与内部字段为下划线（`task_id` / `video_url` / `gmt_create`），
+  对外 HTTP 出入参一律为**驼峰**（`taskId` / `videoUrl` / `resultUrl` / `createTime`）。
+
+### 业务说明
+
+| 项 | 说明 |
+| ---- | ---- |
+| taskId | 由服务端用 `uuid4().hex` 主动生成，作为任务全局唯一标识（DB `uk_task_id`） |
+| 异步处理 | `upload` 受理后**立即返回** taskId；真正的上传 + 分析在后台协程异步执行（`sleep(3)` 模拟耗时 IO），完成后回写状态 |
+| 并发限流 | **单设备最多 2 个在途任务**（status=处理中）。超限返回 `code=429`。以 DB 实时 `COUNT(device_id, status)` + 每设备 `asyncio.Lock` 实现，单进程内严格不超限 |
+| 高并发 | `upload` 为 `async def`，后台任务走事件循环 + 线程池执行 DB 写，单进程可承载约 500 并发在途任务 |
+| 失败处理 | 后台处理异常时将 `status` 置为 2（失败）并记录 `error_msg` |
+
+> 多 worker（如 `uvicorn --workers N`）部署时，并发计数以 DB COUNT 为准，进程间存在极小竞态窗口；
+> 如需严格全局限流，建议改用 Redis / 数据库分布式锁。生产环境还应据并发量调大 `db_pool_size` / `db_max_overflow`。
+
+### 业务错误码
+
+| code | 说明 |
+| ---- | ---- |
+| 0 | 成功 |
+| 40400 | 任务不存在 |
+| 429 | 单设备在途任务数超限（最多 2 个） |
+| 42200 | 参数校验失败 |
+| 50000 | 系统内部错误 |
+
+### 状态枚举（status）
+
+| 值 | 说明 |
+| ---- | ---- |
+| 0 | 处理中 |
+| 1 | 成功 |
+| 2 | 失败 |
+
+### 字段校验规则
+
+| 字段 | 规则 |
+| ---- | ---- |
+| deviceId | 必填，长度 1–64 |
+| videoUrl | 必填，长度 1–512，需以 `http://` 或 `https://` 开头 |
+| duration | 选填，整数，0–86400（秒） |
+
+### 1. 视频异步上传
+
+`POST /api/video/upload`
+
+**请求体**
+
+```json
+{
+  "deviceId": "device-001",
+  "videoUrl": "https://cdn.example.com/v/demo.mp4",
+  "duration": 30
+}
+```
+
+**响应**（立即返回，任务进入后台异步处理）
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "taskId": "3f2a9c8b5e1d4a7c9b0e6f2d1a3c4b5e"
+  }
+}
+```
+
+单设备在途任务超过 2 个时：
+
+```json
+{
+  "code": 429,
+  "message": "设备在途任务数已达上限（2），请稍后再试",
+  "data": null
+}
+```
+
+**cURL**
+
+```bash
+curl -X POST http://localhost:8000/api/video/upload \
+  -H "Content-Type: application/json" \
+  -d '{"deviceId":"device-001","videoUrl":"https://cdn.example.com/v/demo.mp4","duration":30}'
+```
+
+### 2. 查询视频任务状态
+
+`GET /api/video/status/{taskId}`
+
+| 参数 | 位置 | 类型 | 说明 |
+| ---- | ---- | ---- | ---- |
+| taskId | path | string | 任务 ID（UUID，长度 1–64） |
+
+**响应**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "taskId": "3f2a9c8b5e1d4a7c9b0e6f2d1a3c4b5e",
+    "status": 1,
+    "resultUrl": "https://result.example.com/3f2a9c8b5e1d4a7c9b0e6f2d1a3c4b5e.json",
+    "deviceId": "device-001",
+    "duration": 30,
+    "errorMsg": null,
+    "createTime": "2026-06-04T10:00:00",
+    "updateTime": "2026-06-04T10:00:03"
+  }
+}
+```
+
+任务不存在时返回 `code=40400`。处理中时 `status=0` 且 `resultUrl` 为 `null`。
+
+```bash
+curl http://localhost:8000/api/video/status/3f2a9c8b5e1d4a7c9b0e6f2d1a3c4b5e
+```
