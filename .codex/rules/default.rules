@@ -1,0 +1,16 @@
+# Project command policy for Codex.
+# Rules apply to commands requested outside the sandbox.
+
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "forbidden",
+    justification = "This repository does not allow recursive force deletion. Remove files deliberately and with explicit user approval.",
+    match = [
+        "rm -rf build",
+        "rm -rf .pytest_cache",
+    ],
+    not_match = [
+        "rm -r build",
+        "rm file.txt",
+    ],
+)

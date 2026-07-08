@@ -1,0 +1,35 @@
+# Project-scoped Codex configuration for the user-management service.
+# Loads only when this repository is trusted by Codex.
+
+approval_policy = "on-request"
+default_permissions = "user-management-workspace"
+project_doc_max_bytes = 65536
+project_doc_fallback_filenames = ["CLAUDE.md"]
+web_search = "cached"
+
+[features]
+hooks = true
+multi_agent = true
+shell_snapshot = true
+
+[permissions.user-management-workspace.filesystem]
+glob_scan_max_depth = 4
+":minimal" = "read"
+":tmpdir" = "write"
+":slash_tmp" = "write"
+
+[permissions.user-management-workspace.filesystem.":workspace_roots"]
+"." = "write"
+".git" = "read"
+".venv" = "read"
+".env" = "deny"
+"**/.env" = "deny"
+"**/*.env" = "deny"
+
+[permissions.user-management-workspace.network]
+enabled = false
+
+[shell_environment_policy]
+inherit = "core"
+ignore_default_excludes = false
+exclude = ["AWS_*", "AZURE_*", "GCP_*", "*PASSWORD*", "*SECRET*", "*TOKEN*", "*KEY*"]
