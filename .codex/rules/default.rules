@@ -2,6 +2,95 @@
 # Rules apply to commands requested outside the sandbox.
 
 prefix_rule(
+    pattern = ["pytest"],
+    decision = "allow",
+    justification = "pytest is the standard test runner for this repository.",
+    match = [
+        "pytest",
+        "pytest -q",
+        "pytest tests/test_validators.py",
+    ],
+)
+
+prefix_rule(
+    pattern = ["python", "-m", "pytest"],
+    decision = "allow",
+    justification = "python -m pytest is an approved test command for this repository.",
+    match = [
+        "python -m pytest",
+        "python -m pytest -q",
+    ],
+)
+
+prefix_rule(
+    pattern = ["python3", "-m", "pytest"],
+    decision = "allow",
+    justification = "python3 -m pytest is an approved test command for this repository.",
+    match = [
+        "python3 -m pytest",
+        "python3 -m pytest -q",
+    ],
+)
+
+prefix_rule(
+    pattern = [["ruff", "mypy"]],
+    decision = "allow",
+    justification = "ruff and mypy are approved local quality checks.",
+    match = [
+        "ruff check app tests",
+        "mypy app",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", ["status", "diff", "log", "show", "branch"]],
+    decision = "allow",
+    justification = "Read-only git inspection commands are approved.",
+    match = [
+        "git status",
+        "git diff -- app/main.py",
+        "git log -3 --oneline",
+        "git show HEAD",
+        "git branch --show-current",
+    ],
+    not_match = [
+        "git add AGENTS.md",
+        "git push origin master",
+    ],
+)
+
+prefix_rule(
+    pattern = [["ls", "cat", "find"]],
+    decision = "allow",
+    justification = "Basic filesystem inspection commands are approved.",
+    match = [
+        "ls",
+        "cat AGENTS.md",
+        "find app -maxdepth 2 -type f",
+    ],
+)
+
+prefix_rule(
+    pattern = [["pip", "uvicorn"]],
+    decision = "prompt",
+    justification = "Dependency and server commands may install packages or open services; ask before running outside the sandbox.",
+    match = [
+        "pip install -r requirements.txt",
+        "uvicorn app.main:app --reload",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", ["add", "push"]],
+    decision = "prompt",
+    justification = "Staging changes and pushing to remotes must remain explicit user-approved actions.",
+    match = [
+        "git add AGENTS.md",
+        "git push origin master",
+    ],
+)
+
+prefix_rule(
     pattern = ["rm", "-rf"],
     decision = "forbidden",
     justification = "This repository does not allow recursive force deletion. Remove files deliberately and with explicit user approval.",
