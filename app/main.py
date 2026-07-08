@@ -19,6 +19,7 @@ from app.api.video import router as video_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logger import get_logger
+from app.core.redis import close_redis_client, ping_redis
 from app.core.response import ApiResponse
 
 logger = get_logger(__name__)
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+    app.add_event_handler("shutdown", close_redis_client)
     app.include_router(user_router)
     app.include_router(role_router)
     app.include_router(video_router)
@@ -41,7 +43,10 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["系统"], summary="健康检查")
     def health() -> ApiResponse:
         """健康检查接口。"""
-        return ApiResponse.ok({"status": "UP"})
+        redis_status = "UP" if ping_redis() else "DOWN"
+        return ApiResponse.ok(
+            {"status": "UP", "components": {"redis": redis_status}}
+        )
 
     logger.info("应用初始化完成: %s", settings.app_name)
     return app

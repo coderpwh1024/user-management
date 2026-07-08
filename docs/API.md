@@ -32,6 +32,49 @@
 | 42200 | 参数校验失败 |
 | 50000 | 系统内部错误 |
 
+### 健康检查
+
+`GET /health`
+
+用于检查应用基础状态，并返回 Redis 组件连通性。Redis 不可用时接口仍返回
+HTTP 200，`components.redis` 标记为 `DOWN`，便于部署平台与监控系统区分应用
+进程存活和外部依赖状态。
+
+**响应**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "status": "UP",
+    "components": {
+      "redis": "UP"
+    }
+  }
+}
+```
+
+**cURL**
+
+```bash
+curl http://localhost:8000/health
+```
+
+### Redis 配置
+
+| 环境变量 | 默认值 | 说明 |
+| ---- | ---- | ---- |
+| REDIS_DSN | - | 完整 Redis 连接串，配置后优先级最高 |
+| REDIS_HOST | 127.0.0.1 | Redis 主机 |
+| REDIS_PORT | 6379 | Redis 端口 |
+| REDIS_DB | 0 | Redis 数据库编号 |
+| REDIS_PASSWORD | - | Redis 密码 |
+| REDIS_MAX_CONNECTIONS | 20 | 连接池最大连接数 |
+| REDIS_SOCKET_TIMEOUT | 2.0 | 读写超时时间（秒） |
+| REDIS_SOCKET_CONNECT_TIMEOUT | 2.0 | 建连超时时间（秒） |
+| REDIS_HEALTH_CHECK_INTERVAL | 30 | 连接池健康检查间隔（秒） |
+
 ## 二、字段校验规则
 
 | 字段 | 规则 |
