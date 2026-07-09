@@ -43,6 +43,33 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern = ["bash", ".agents/skills/project-quality/scripts/quality_check.sh"],
+    decision = "allow",
+    justification = "Project quality skill script for lint, type checks, and tests.",
+    match = [
+        "bash .agents/skills/project-quality/scripts/quality_check.sh",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bash", ".agents/skills/project-quality/scripts/preflight_check.sh"],
+    decision = "allow",
+    justification = "Project quality skill environment preflight check.",
+    match = [
+        "bash .agents/skills/project-quality/scripts/preflight_check.sh",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bash", ".agents/skills/resource-delivery/scripts/resource_delivery_check.sh"],
+    decision = "allow",
+    justification = "Resource delivery skill deterministic validation.",
+    match = [
+        "bash .agents/skills/resource-delivery/scripts/resource_delivery_check.sh role",
+    ],
+)
+
+prefix_rule(
     pattern = ["git", ["status", "diff", "log", "show", "branch"]],
     decision = "allow",
     justification = "Read-only git inspection commands are approved.",
