@@ -15,6 +15,14 @@ description: Run the user-management quality gate after code changes. Use when t
 - 完成任意 `app/`、`tests/`、`sql/`、`docs/API.md` 相关改动后。
 - 新资源脚手架或代码审查之后，需要确认项目仍可运行。
 
+## Environment Setup
+
+首次运行或开发依赖变更后安装锁定的质量工具：
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
 ## Required Checks
 
 优先运行仓库内脚本：

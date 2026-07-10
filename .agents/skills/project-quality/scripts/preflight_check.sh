@@ -32,7 +32,7 @@ pick_python() {
 
     for candidate in "${candidates[@]}"; do
         if [ -x "$candidate" ] || command -v "$candidate" >/dev/null 2>&1; then
-            if "$candidate" -c "import sys" >/dev/null 2>&1; then
+            if "$candidate" -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" >/dev/null 2>&1; then
                 printf '%s\n' "$candidate"
                 return 0
             fi
@@ -52,7 +52,7 @@ fi
 
 PYTHON_BIN="$(pick_python || true)"
 if [ -z "${PYTHON_BIN:-}" ]; then
-    print_result "python" "FAIL" "no usable Python interpreter found"
+    print_result "python" "FAIL" "no usable Python 3.10+ interpreter found"
     mark_fail
 else
     PYTHON_VERSION="$("$PYTHON_BIN" - <<'PY'
@@ -83,16 +83,16 @@ if [ -n "${PYTHON_BIN:-}" ]; then
     done
 fi
 
-if command -v ruff >/dev/null 2>&1; then
-    print_result "tool" "PASS" "ruff ($(command -v ruff))"
+if [ -n "${PYTHON_BIN:-}" ] && "$PYTHON_BIN" -c "import ruff" >/dev/null 2>&1; then
+    print_result "tool" "PASS" "ruff is installed in $PYTHON_BIN"
 else
-    print_result "tool" "WARN" "ruff is not installed; lint check will be skipped"
+    print_result "tool" "WARN" "ruff is not installed in the selected Python; lint check will be skipped"
 fi
 
-if command -v mypy >/dev/null 2>&1; then
-    print_result "tool" "PASS" "mypy ($(command -v mypy))"
+if [ -n "${PYTHON_BIN:-}" ] && "$PYTHON_BIN" -c "import mypy" >/dev/null 2>&1; then
+    print_result "tool" "PASS" "mypy is installed in $PYTHON_BIN"
 else
-    print_result "tool" "WARN" "mypy is not installed; type check will be skipped"
+    print_result "tool" "WARN" "mypy is not installed in the selected Python; type check will be skipped"
 fi
 
 if GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME=/private/tmp git rev-parse --is-inside-work-tree >/dev/null 2>&1; then

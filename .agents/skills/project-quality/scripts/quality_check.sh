@@ -21,7 +21,7 @@ pick_python() {
 
     for candidate in "${candidates[@]}"; do
         if [ -x "$candidate" ] || command -v "$candidate" >/dev/null 2>&1; then
-            if "$candidate" -c "import sys" >/dev/null 2>&1; then
+            if "$candidate" -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" >/dev/null 2>&1; then
                 printf '%s\n' "$candidate"
                 return 0
             fi
@@ -57,16 +57,16 @@ PYTHON_BIN="$(pick_python)"
 
 printf '\n[python] using %s\n' "$PYTHON_BIN"
 
-if command -v ruff >/dev/null 2>&1; then
-    run_check "ruff" ruff check app tests
+if "$PYTHON_BIN" -c "import ruff" >/dev/null 2>&1; then
+    run_check "ruff" "$PYTHON_BIN" -m ruff check app tests
 else
-    printf '\n[ruff] SKIP: ruff is not installed\n'
+    printf '\n[ruff] SKIP: ruff is not installed in %s\n' "$PYTHON_BIN"
 fi
 
-if command -v mypy >/dev/null 2>&1; then
-    run_check "mypy" mypy app
+if "$PYTHON_BIN" -c "import mypy" >/dev/null 2>&1; then
+    run_check "mypy" "$PYTHON_BIN" -m mypy app
 else
-    printf '\n[mypy] SKIP: mypy is not installed\n'
+    printf '\n[mypy] SKIP: mypy is not installed in %s\n' "$PYTHON_BIN"
 fi
 
 run_check "pytest" "$PYTHON_BIN" -m pytest -q
