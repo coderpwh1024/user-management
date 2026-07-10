@@ -49,7 +49,8 @@
 │   ├── api/                 # 路由层，返回 ApiResponse，仅做参数接收与编排
 │   └── utils/               # 通用工具（校验器等，纯函数、可单测）
 ├── sql/                     # 建表脚本 t_xxx.sql
-├── docs/                    # API.md 接口文档、PROMPT.md 本文件
+├── scripts/                 # 工程脚本（sync_apifox.sh：同步接口文档到 Apifox）
+├── docs/                    # API.md 接口文档、openapi.yaml OpenAPI 规范
 ├── tests/                   # pytest 单元测试
 ├── requirements.txt
 ├── pytest.ini
@@ -227,9 +228,13 @@ CREATE TABLE `t_user` (
 5. `app/api/xxx.py` —— RESTful 路由，返回 `ApiResponse`，在 `main.py` 注册。
 6. `tests/test_xxx*.py` —— 对应单测。
 7. 更新 `docs/API.md` —— 接口明细、字段校验规则、错误码、cURL 示例。
+8. 同步 Apifox —— 接口有增删改时，更新 `docs/openapi.yaml` 后直接运行
+   `bash scripts/sync_apifox.sh`（一次 HTTP 请求即可完成，**勿**通过 npx / MCP
+   等方式绕行；凭证读取自 `.apifox/settings.json`，该文件已 gitignore，不得入库）。
 
 > 生成后自检：分层是否倒置？查询是否过滤 `is_deleted`？响应是否 `ApiResponse`？
 > 表是否含三必备字段 + `is_deleted`？索引命名是否 `uk_/idx_`？字段是否带注释？
+> `openapi.yaml` 是否已更新并同步 Apifox？
 
 ---
 
@@ -242,6 +247,8 @@ CREATE TABLE `t_user` (
 role_name（VARCHAR(64)）、status（TINYINT 0:停用 1:启用，默认 1）。
 实现角色的创建 / 详情 / 分页（按 role_name 模糊、status 过滤）/ 更新 / 逻辑删除，
 role_code 全局唯一。请按交付清单产出全部文件并更新 API.md。
+
+
 ```
 
 ---
