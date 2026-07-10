@@ -1,0 +1,551 @@
+openapi: 3.0.3
+info:
+  title: 用户管理服务
+  description: 基于 FastAPI、Pydantic 与 SQLAlchemy 的用户和角色管理服务。
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: 本地开发环境
+tags:
+  - name: 系统
+  - name: 用户管理
+  - name: 角色管理
+paths:
+  /health:
+    get:
+      tags: [系统]
+      summary: 健康检查
+      operationId: health_check
+      responses:
+        "200":
+          description: 健康检查结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthApiResponse"
+  /api/v1/users:
+    post:
+      tags: [用户管理]
+      summary: 创建用户
+      operationId: create_user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+      responses:
+        "200":
+          description: 创建结果；业务异常通过响应体 code 表示
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserApiResponse"
+    get:
+      tags: [用户管理]
+      summary: 分页查询用户
+      operationId: list_users
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: name
+          in: query
+          description: 姓名，模糊匹配
+          schema:
+            type: string
+        - name: phone
+          in: query
+          description: 手机号，精确匹配
+          schema:
+            type: string
+            pattern: '^1[3-9]\d{9}$'
+      responses:
+        "200":
+          description: 分页查询结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPageApiResponse"
+  /api/v1/users/{user_id}:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        description: 用户 ID
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      tags: [用户管理]
+      summary: 查询用户详情
+      operationId: get_user
+      responses:
+        "200":
+          description: 用户详情；用户不存在时 code=40400
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserApiResponse"
+    put:
+      tags: [用户管理]
+      summary: 更新用户
+      description: 仅更新请求体中传入且非 null 的字段。
+      operationId: update_user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: 更新结果；不存在时 code=40400，身份证号冲突时 code=40901
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserApiResponse"
+    delete:
+      tags: [用户管理]
+      summary: 删除用户
+      description: 逻辑删除用户，不执行物理删除。
+      operationId: delete_user
+      responses:
+        "200":
+          description: 删除结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyApiResponse"
+  /api/v1/roles:
+    post:
+      tags: [角色管理]
+      summary: 创建角色
+      operationId: create_role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleCreate"
+      responses:
+        "200":
+          description: 创建结果；角色编码冲突时 code=40901
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleApiResponse"
+    get:
+      tags: [角色管理]
+      summary: 分页查询角色
+      operationId: list_roles
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: role_name
+          in: query
+          description: 角色名称，模糊匹配
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: 状态 0:停用 1:启用
+          schema:
+            type: integer
+            enum: [0, 1]
+      responses:
+        "200":
+          description: 分页查询结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RolePageApiResponse"
+  /api/v1/roles/{role_id}:
+    parameters:
+      - name: role_id
+        in: path
+        required: true
+        description: 角色 ID
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      tags: [角色管理]
+      summary: 查询角色详情
+      operationId: get_role
+      responses:
+        "200":
+          description: 角色详情；角色不存在时 code=40400
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleApiResponse"
+    put:
+      tags: [角色管理]
+      summary: 更新角色
+      description: 仅更新请求体中传入且非 null 的字段。
+      operationId: update_role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleUpdate"
+      responses:
+        "200":
+          description: 更新结果；不存在时 code=40400，角色编码冲突时 code=40901
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleApiResponse"
+    delete:
+      tags: [角色管理]
+      summary: 删除角色
+      description: 逻辑删除角色，不执行物理删除。
+      operationId: delete_role
+      responses:
+        "200":
+          description: 删除结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyApiResponse"
+components:
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: 页码
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: page_size
+      in: query
+      description: 每页条数
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+  schemas:
+    Gender:
+      type: integer
+      description: 性别 0:未知 1:男 2:女
+      enum: [0, 1, 2]
+      default: 0
+    RoleStatus:
+      type: integer
+      description: 状态 0:停用 1:启用
+      enum: [0, 1]
+      default: 1
+    UserCreate:
+      type: object
+      required: [name, phone, id_card]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: 姓名
+        age:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 150
+          description: 年龄
+        phone:
+          type: string
+          pattern: '^1[3-9]\d{9}$'
+          description: 中国大陆手机号
+        id_card:
+          type: string
+          pattern: '^\d{17}[\dXx]$'
+          description: 18 位身份证号，同时执行 GB11643 校验位校验
+        gender:
+          $ref: "#/components/schemas/Gender"
+        create_by:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: 创建人
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 64
+          description: 姓名
+        age:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 150
+          description: 年龄
+        phone:
+          type: string
+          nullable: true
+          pattern: '^1[3-9]\d{9}$'
+          description: 中国大陆手机号
+        id_card:
+          type: string
+          nullable: true
+          pattern: '^\d{17}[\dXx]$'
+          description: 18 位身份证号，同时执行 GB11643 校验位校验
+        gender:
+          allOf:
+            - $ref: "#/components/schemas/Gender"
+          nullable: true
+        update_by:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: 更新人
+    UserOut:
+      type: object
+      required:
+        - id
+        - name
+        - age
+        - phone
+        - id_card
+        - gender
+        - create_by
+        - update_by
+        - create_date
+        - update_time
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        age:
+          type: integer
+          nullable: true
+        phone:
+          type: string
+        id_card:
+          type: string
+        gender:
+          type: integer
+          enum: [0, 1, 2]
+        create_by:
+          type: string
+          nullable: true
+        update_by:
+          type: string
+          nullable: true
+        create_date:
+          type: string
+          format: date-time
+        update_time:
+          type: string
+          format: date-time
+    UserPage:
+      type: object
+      required: [total, page, page_size, items]
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserOut"
+    RoleCreate:
+      type: object
+      required: [role_code, role_name]
+      properties:
+        role_code:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: '^[A-Za-z0-9_]{2,64}$'
+          description: 角色编码，全局唯一，服务端统一转换为大写
+        role_name:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: 角色名称
+        status:
+          $ref: "#/components/schemas/RoleStatus"
+        create_by:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: 创建人
+    RoleUpdate:
+      type: object
+      properties:
+        role_code:
+          type: string
+          nullable: true
+          minLength: 2
+          maxLength: 64
+          pattern: '^[A-Za-z0-9_]{2,64}$'
+          description: 角色编码，全局唯一，服务端统一转换为大写
+        role_name:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 64
+          description: 角色名称
+        status:
+          allOf:
+            - $ref: "#/components/schemas/RoleStatus"
+          nullable: true
+        update_by:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: 更新人
+    RoleOut:
+      type: object
+      required:
+        - id
+        - role_code
+        - role_name
+        - status
+        - create_by
+        - update_by
+        - gmt_create
+        - gmt_modified
+      properties:
+        id:
+          type: integer
+          format: int64
+        role_code:
+          type: string
+        role_name:
+          type: string
+        status:
+          type: integer
+          enum: [0, 1]
+        create_by:
+          type: string
+          nullable: true
+        update_by:
+          type: string
+          nullable: true
+        gmt_create:
+          type: string
+          format: date-time
+        gmt_modified:
+          type: string
+          format: date-time
+    RolePage:
+      type: object
+      required: [total, page, page_size, items]
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleOut"
+    HealthData:
+      type: object
+      required: [status, components]
+      properties:
+        status:
+          type: string
+          example: UP
+        components:
+          type: object
+          required: [redis]
+          properties:
+            redis:
+              type: string
+              enum: [UP, DOWN]
+    HealthApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          $ref: "#/components/schemas/HealthData"
+    UserApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code:
+          type: integer
+          description: 0 成功；40400 不存在；40901 唯一键冲突；42200 参数校验失败
+        message:
+          type: string
+        data:
+          allOf:
+            - $ref: "#/components/schemas/UserOut"
+          nullable: true
+    UserPageApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          allOf:
+            - $ref: "#/components/schemas/UserPage"
+          nullable: true
+    RoleApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code:
+          type: integer
+          description: 0 成功；40400 不存在；40901 唯一键冲突；42200 参数校验失败
+        message:
+          type: string
+        data:
+          allOf:
+            - $ref: "#/components/schemas/RoleOut"
+          nullable: true
+    RolePageApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          allOf:
+            - $ref: "#/components/schemas/RolePage"
+          nullable: true
+    EmptyApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: 删除成功
+        data:
+          nullable: true
