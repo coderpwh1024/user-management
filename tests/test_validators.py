@@ -1,7 +1,7 @@
 """字段校验工具单元测试。"""
 import pytest
 
-from app.utils.validators import validate_id_card, validate_phone
+from app.utils.validators import validate_id_card, validate_phone, validate_video_url
 
 
 class TestValidatePhone:
@@ -32,3 +32,18 @@ class TestValidateIdCard:
     def test_invalid_id_card(self, bad):
         with pytest.raises(ValueError):
             validate_id_card(bad)
+
+
+class TestValidateVideoUrl:
+    """视频 URL 校验测试。"""
+
+    @pytest.mark.parametrize("value", ["https://example.com/a.mp4", " http://example.com/a.mp4 "])
+    def test_valid_video_url(self, value: str) -> None:
+        """合法 HTTP(S) 视频地址应通过校验并去除首尾空白。"""
+        assert validate_video_url(value).endswith("/a.mp4")
+
+    @pytest.mark.parametrize("value", ["", "ftp://example.com/a.mp4", "not-a-url"])
+    def test_invalid_video_url(self, value: str) -> None:
+        """非法视频地址应拒绝。"""
+        with pytest.raises(ValueError):
+            validate_video_url(value)

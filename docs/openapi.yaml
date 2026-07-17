@@ -210,6 +210,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EmptyApiResponse"
+  /api/video/upload:
+    post:
+      tags: [视频分析任务]
+      summary: 视频任务上报
+      operationId: upload_video
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoUploadCreate"
+      responses:
+        "200":
+          description: 上报结果；同设备超过两个未完成任务时 code=429
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoUploadApiResponse"
+  /api/video/status/{taskId}:
+    get:
+      tags: [视频分析任务]
+      summary: 查询视频任务状态
+      operationId: get_video_status
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: 32 位分析任务唯一标识
+          schema:
+            type: string
+            minLength: 32
+            maxLength: 32
+            pattern: '^[0-9a-f]{32}$'
+      responses:
+        "200":
+          description: 状态查询结果；任务不存在时 code=40400
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoStatusApiResponse"
 components:
   parameters:
     Page:
@@ -462,6 +502,53 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RoleOut"
+    VideoUploadCreate:
+      type: object
+      required: [deviceId, videoUrl, duration]
+      properties:
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 32
+          description: 设备唯一标识
+        videoUrl:
+          type: string
+          minLength: 1
+          maxLength: 2048
+          format: uri
+          description: HTTP(S) 视频地址
+        duration:
+          type: number
+          exclusiveMinimum: 0
+          multipleOf: 0.001
+          description: 视频时长，单位秒
+    VideoUploadOut:
+      type: object
+      required: [taskId]
+      properties:
+        taskId:
+          type: string
+          description: 32 位分析任务唯一标识
+    VideoStatusOut:
+      type: object
+      required: [taskId, status, resultUrl, createTime, failureReason]
+      properties:
+        taskId:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, success, failed]
+        resultUrl:
+          type: string
+          nullable: true
+          format: uri
+        createTime:
+          type: string
+          format: date-time
+        failureReason:
+          type: string
+          nullable: true
+          maxLength: 500
     HealthData:
       type: object
       required: [status, components]
@@ -537,6 +624,32 @@ components:
         data:
           allOf:
             - $ref: "#/components/schemas/RolePage"
+          nullable: true
+    VideoUploadApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code:
+          type: integer
+          description: 0 成功；429 同设备并发任务数超过限制；50301 限流服务不可用
+        message:
+          type: string
+        data:
+          allOf:
+            - $ref: "#/components/schemas/VideoUploadOut"
+          nullable: true
+    VideoStatusApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code:
+          type: integer
+          description: 0 成功；40400 任务不存在
+        message:
+          type: string
+        data:
+          allOf:
+            - $ref: "#/components/schemas/VideoStatusOut"
           nullable: true
     EmptyApiResponse:
       type: object

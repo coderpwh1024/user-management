@@ -12,14 +12,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI
+from anyio.to_thread import current_default_thread_limiter
 
 from app.api.role import router as role_router
 from app.api.user import router as user_router
+from app.api.video_task import router as video_task_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logger import get_logger
 from app.core.redis import close_async_redis_client, close_redis_client, ping_redis
 from app.core.response import ApiResponse
+from app.services.video_task_worker import shutdown_video_task_worker
 
 logger = get_logger(__name__)
 
@@ -34,10 +37,19 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+
+    @app.on_event("startup")
+    async def configure_request_thread_pool() -> None:
+        """调整同步接口线程池容量，匹配数据库连接池并承载高并发短请求。"""
+        current_default_thread_limiter().total_tokens = settings.request_thread_pool_size
+        logger.info("请求线程池容量已设置: size=%s", settings.request_thread_pool_size)
+
     app.add_event_handler("shutdown", close_redis_client)
     app.add_event_handler("shutdown", close_async_redis_client)
+    app.add_event_handler("shutdown", shutdown_video_task_worker)
     app.include_router(user_router)
     app.include_router(role_router)
+    app.include_router(video_task_router)
 
     @app.get("/health", tags=["系统"], summary="健康检查")
     def health() -> ApiResponse:

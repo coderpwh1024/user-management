@@ -74,6 +74,8 @@ curl http://localhost:8000/health
 | REDIS_SOCKET_TIMEOUT | 2.0 | 读写超时时间（秒） |
 | REDIS_SOCKET_CONNECT_TIMEOUT | 2.0 | 建连超时时间（秒） |
 | REDIS_HEALTH_CHECK_INTERVAL | 30 | 连接池健康检查间隔（秒） |
+| VIDEO_TASK_WORKER_COUNT | 64 | 视频分析固定线程池工作线程数 |
+| REQUEST_THREAD_POOL_SIZE | 160 | 同步 HTTP 请求线程池容量，应不大于数据库最大连接数 |
 
 ## 二、字段校验规则
 
@@ -88,6 +90,67 @@ curl http://localhost:8000/health
 ---
 
 ## 三、接口明细
+
+### 视频分析任务
+
+#### 视频任务上报
+
+`POST /api/video/upload`
+
+```json
+{
+  "deviceId": "device-001",
+  "videoUrl": "https://example.com/videos/input.mp4",
+  "duration": 12.5
+}
+```
+
+`duration` 单位为秒，必须大于 0，`videoUrl` 必须为 HTTP(S) 地址。服务端生成 32 位
+`taskId`，先持久化为 `pending`，再投递固定线程池异步处理；模拟分析耗时 3 秒。
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": { "taskId": "0123456789abcdef0123456789abcdef" }
+}
+```
+
+同一设备最多可有两个未完成任务。超过时 HTTP 仍为 200，响应体为
+`{"code":429,"message":"单台设备同时最多允许 2 个正在执行的任务","data":null}`。
+该限制通过 Redis Lua 脚本原子计数，任务完成或失败后释放槽位；Redis 不可用时返回
+`code=50301`，以避免限流失效。
+
+```bash
+curl -X POST http://localhost:8000/api/video/upload \
+  -H 'Content-Type: application/json' \
+  -d '{"deviceId":"device-001","videoUrl":"https://example.com/videos/input.mp4","duration":12.5}'
+```
+
+#### 视频任务状态查询
+
+`GET /api/video/status/{taskId}`
+
+状态依次可能为 `pending`、`processing`、`success`、`failed`。失败时返回
+`failureReason`；成功时 `resultUrl` 为模拟生成的分析结果地址。任务不存在返回 `code=40400`。
+
+```bash
+curl http://localhost:8000/api/video/status/0123456789abcdef0123456789abcdef
+```
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "taskId": "0123456789abcdef0123456789abcdef",
+    "status": "success",
+    "resultUrl": "https://example.com/videos/input.mp4.result.json",
+    "createTime": "2026-07-17T10:00:00",
+    "failureReason": null
+  }
+}
+```
 
 ### 1. 创建用户
 

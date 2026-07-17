@@ -6,7 +6,6 @@
 from functools import lru_cache
 from urllib.parse import quote
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -41,6 +40,10 @@ class Settings(BaseSettings):
     redis_socket_timeout: float = 2.0
     redis_socket_connect_timeout: float = 2.0
     redis_health_check_interval: int = 30
+
+    # 视频分析任务
+    video_task_worker_count: int = 64
+    request_thread_pool_size: int = 160
 
     # 日志
     log_level: str = "INFO"

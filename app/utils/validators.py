@@ -3,6 +3,7 @@
 提供手机号、身份证号等中国大陆常用证件 / 联系方式的格式校验。
 """
 import re
+from urllib.parse import urlparse
 
 # 中国大陆手机号：1 开头，第二位 3-9，共 11 位
 _PHONE_PATTERN = re.compile(r"^1[3-9]\d{9}$")
@@ -60,3 +61,15 @@ def validate_role_code(role_code: str) -> str:
     if not _ROLE_CODE_PATTERN.match(role_code):
         raise ValueError("角色编码格式不正确（仅允许字母/数字/下划线，2-64 位）")
     return role_code
+def validate_video_url(value: str) -> str:
+    """校验视频地址为合法 HTTP(S) URL。
+
+    :param value: 待校验的视频地址。
+    :return: 清理后的地址。
+    :raises ValueError: 地址为空或协议、主机不合法时抛出。
+    """
+    result = value.strip()
+    parsed = urlparse(result)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("视频地址必须是合法的 HTTP 或 HTTPS URL")
+    return result
