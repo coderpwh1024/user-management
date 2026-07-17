@@ -15,7 +15,6 @@ from fastapi import FastAPI
 
 from app.api.role import router as role_router
 from app.api.user import router as user_router
-from app.api.video_task import router as video_task_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logger import get_logger
@@ -39,7 +38,6 @@ def create_app() -> FastAPI:
     app.add_event_handler("shutdown", close_async_redis_client)
     app.include_router(user_router)
     app.include_router(role_router)
-    app.include_router(video_task_router)
 
     @app.get("/health", tags=["系统"], summary="健康检查")
     def health() -> ApiResponse:
